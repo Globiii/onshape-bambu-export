@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Onshape Part Exporter",
+  "version": "0.4.0",
+  "description": "Unofficial: export Onshape Part Studio parts (3MF, STEP, STL…) and open them in Bambu Studio.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    }
+  },
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "nativeMessaging",
+    "downloads"
+  ],
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsIujHc0wfeQIJcwRRIgFV/BUO89Bvqe23Dh4d95m5XHUGeuZa7L4Z/GR/sB2CFBdfnmGQ5JqemQ3De1BGqUgGGMlXni8IW8xVCz2P+ueJ3A7iB78bdp1ERIygLi9N/BQ7p+E+3A0NYut0eH6rmV9FlPfU+MlMbACuMQh1blNWwJXqxzZh9c0rwUy73VNT6nMQrFLe9xSaqqMIJCelDQRixNEhSrj/SjMRZYZ0buYHXxFpowmClgqarScGKu86lm45va19mo/JjsGtSVFRXaGrJB5DP+vMvqPgOZmR9MXMy0T/Y15BG4zvZ1N///drIas4c+n4G/2edsLd3w/4mYOXwIDAQAB",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

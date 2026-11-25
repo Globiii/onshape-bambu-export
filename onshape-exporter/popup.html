@@ -1,0 +1,97 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1b1f24; --muted: #6b7280; --line: #e3e6ea; --soft: #f4f6f8;
+    --accent: #3d8b2c; --accent-fg: #ffffff; --err: #c62828; --ok: #2e7d32;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1e2126; --fg: #e8eaed; --muted: #9aa0a6; --line: #363a41; --soft: #2a2e34;
+      --accent: #64bc4f; --accent-fg: #0d1f08; --err: #ff7b72; --ok: #7ee787;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { font: 13px/1.4 system-ui, sans-serif; width: 300px; margin: 0; padding: 14px; background: var(--bg); color: var(--fg); }
+
+  header { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
+  header img { width: 32px; height: 32px; }
+  header h1 { font-size: 14px; margin: 0; }
+  #subtitle { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 230px; }
+
+  .box { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .box-head { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: var(--soft); border-bottom: 1px solid var(--line); font-size: 12px; }
+  #count { color: var(--muted); }
+  #parts { max-height: 220px; overflow-y: auto; padding: 4px 0; }
+  #parts:not(:has(label)) { padding: 10px; color: var(--muted); }
+  label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+  #parts label { padding: 5px 10px; }
+  #parts label:hover { background: var(--soft); }
+  input[type="checkbox"] { accent-color: var(--accent); margin: 0; }
+
+  .field { margin-top: 12px; }
+  .field > span { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 4px; }
+  .seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg label { flex: 1 1 auto; justify-content: center; padding: 6px 4px; font-size: 12px; white-space: nowrap; border-left: 1px solid var(--line); }
+  .seg label:first-child { border-left: 0; }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg label:has(input:checked) { background: var(--accent); color: var(--accent-fg); font-weight: 600; }
+  .seg label:has(input:disabled) { opacity: .4; cursor: not-allowed; }
+  .seg label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+  .actions { display: flex; gap: 8px; margin-top: 14px; }
+  button { font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--soft); color: var(--fg); cursor: pointer; }
+  button:hover { filter: brightness(0.96); }
+  button:disabled { opacity: .5; cursor: default; }
+  #export { flex: 1; background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
+  #status { margin-top: 10px; font-size: 12px; color: var(--muted); min-height: 1em; word-break: break-word; }
+</style>
+</head>
+<body>
+  <header>
+    <img src="icons/icon32.png" alt="">
+    <div>
+      <h1>Onshape Part Exporter</h1>
+      <div id="subtitle">Reading Part Studio…</div>
+    </div>
+  </header>
+
+  <div class="box">
+    <div class="box-head">
+      <label><input type="checkbox" id="all"> Select all</label>
+      <span id="count"></span>
+    </div>
+    <div id="parts">Loading…</div>
+  </div>
+
+  <div class="field" role="radiogroup" aria-label="Format">
+    <span>Format</span>
+    <div class="seg">
+      <label title="Bambu: yes"><input type="radio" name="format" value="STEP"> STEP</label>
+      <label title="Bambu: yes (mm)"><input type="radio" name="format" value="STL"> STL</label>
+      <label title="Bambu: yes, native format"><input type="radio" name="format" value="3MF"> 3MF</label>
+      <label title="CAD exchange, not for Bambu"><input type="radio" name="format" value="IGES"> IGES</label>
+      <label title="CAD exchange (.x_t), not for Bambu"><input type="radio" name="format" value="PARASOLID"> Parasolid</label>
+    </div>
+  </div>
+
+  <div class="field" role="radiogroup" aria-label="Then">
+    <span>Then</span>
+    <div class="seg">
+      <label title="Open in Bambu Studio and save to the export folders"><input type="radio" name="action" value="both"> Bambu + Save</label>
+      <label title="Open in Bambu Studio only"><input type="radio" name="action" value="bambu"> Bambu</label>
+      <label title="Save to ~/Downloads/onshape-export/<document>/<part studio>/<date>_<version>"><input type="radio" name="action" value="save"> Save</label>
+      <label title="Pick a folder"><input type="radio" name="action" value="saveas"> Save as…</label>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button id="export" disabled>Export</button>
+    <button id="open" title="Open this Part Studio's export folder">Open folder</button>
+  </div>
+  <div id="status" role="status"></div>
+  <script src="popup.js"></script>
+</body>
+</html>
