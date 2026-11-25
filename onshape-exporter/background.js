@@ -92,7 +92,7 @@ function download(files, saveAs) {
   }
 }
 
-const SLICER_NAMES = { bambu: "Bambu Studio", orca: "OrcaSlicer", cura: "UltiMaker Cura" };
+const SLICER_NAMES = { bambu: "Bambu Studio", orca: "OrcaSlicer", prusa: "PrusaSlicer", cura: "UltiMaker Cura" };
 const DONE = {
   both: (n, dir, app) => `Opened ${n} file(s) in ${app} and saved to ${dir}.`,
   open: (n, dir, app) => `Opened ${n} file(s) in ${app}.`,

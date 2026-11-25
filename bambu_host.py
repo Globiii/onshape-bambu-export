@@ -30,6 +30,11 @@ SLICERS = {
                  win=["OrcaSlicer/orca-slicer.exe", "Programs/OrcaSlicer/orca-slicer.exe"],
                  flatpak=["com.orcaslicer.OrcaSlicer", "io.github.softfever.OrcaSlicer"], path=["orca-slicer", "OrcaSlicer"],
                  appimage="OrcaSlicer*.AppImage"),
+    "prusa": dict(label="PrusaSlicer", env="PRUSA_SLICER", ext={".stl", ".step", ".3mf"},
+                  mac=["PrusaSlicer.app", "Original Prusa Drivers/PrusaSlicer.app"],  # standalone dmg / drivers package
+                  win=["Prusa3D/PrusaSlicer/prusa-slicer.exe", "PrusaSlicer/prusa-slicer.exe"],
+                  flatpak=["com.prusa3d.PrusaSlicer"], path=["prusa-slicer", "PrusaSlicer"],
+                  appimage="PrusaSlicer*.AppImage"),
     "cura": dict(label="UltiMaker Cura", env="ULTIMAKER_CURA", ext={".stl", ".3mf"},  # no STEP without a plugin
                  mac=["UltiMaker Cura.app", "Ultimaker Cura.app"],
                  win=["UltiMaker Cura*/UltiMaker-Cura.exe", "Ultimaker Cura*/Cura.exe"],  # folder name includes the version

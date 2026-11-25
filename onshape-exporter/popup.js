@@ -120,7 +120,9 @@ for (const [id, def] of [["format", "STEP"], ["slicer", "bambu"], ["action", "bo
 }
 
 // Which formats each slicer opens; for anything else the "Open" choices are disabled and it falls back to Save.
-const SLICER_FORMATS = { bambu: ["STEP", "STL", "3MF"], orca: ["STEP", "STL", "3MF"], cura: ["STL", "3MF"] };
+const SLICER_FORMATS = {
+  bambu: ["STEP", "STL", "3MF"], orca: ["STEP", "STL", "3MF"], prusa: ["STEP", "STL", "3MF"], cura: ["STL", "3MF"],
+};
 function syncActions() {
   const canOpen = SLICER_FORMATS[radio("slicer")].includes(radio("format"));
   document.querySelectorAll('input[name="action"][value="both"], input[name="action"][value="open"]').forEach((r) => {
