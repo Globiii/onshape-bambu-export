@@ -1,6 +1,6 @@
 # Onshape → slicer exporter (Bambu Studio, OrcaSlicer, PrusaSlicer, Cura)
 
-A Chrome extension that exports parts from the Onshape Part Studio you have open and sends them straight to **Bambu Studio, OrcaSlicer, PrusaSlicer or UltiMaker Cura**, like Fusion's "Send to 3D print utility". You can also save them into a tidy folder tree, or anywhere you choose.
+A Chrome and Firefox extension that exports parts from the Onshape Part Studio you have open and sends them straight to **Bambu Studio, OrcaSlicer, PrusaSlicer or UltiMaker Cura**, like Fusion's "Send to 3D print utility". You can also save them into a tidy folder tree, or anywhere you choose.
 
 <img src="docs/popup.png" width="300" alt="Extension popup: part list, format and action choices">
 
@@ -22,7 +22,7 @@ A Chrome extension that exports parts from the Onshape Part Studio you have open
 
 ## Install
 
-You need a Chromium-based browser (Chrome, Edge, Brave, Chromium), Python 3 and at least one of the slicers.
+You need Firefox (128 or newer) or a Chromium-based browser (Chrome, Edge, Brave, Chromium), Python 3 and at least one of the slicers.
 
 ### Windows
 
@@ -55,6 +55,15 @@ cd onshape-bambu-export
 ```
 
 Then load the `onshape-exporter` folder as an unpacked extension. "Save as…" uses `zenity` (preinstalled on Ubuntu). Slicers are found as a Flatpak, a snap/distro package on your PATH, or an AppImage in `~/Applications`; otherwise set `BAMBU_STUDIO`, `ORCA_SLICER`, `PRUSA_SLICER` or `ULTIMAKER_CURA` to its path.
+
+### Firefox
+
+Run the installer for your OS as above (it registers the helper with Firefox too), then:
+
+- **Quick try:** open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on…** and pick `onshape-exporter/manifest.json`. Firefox removes it when it restarts.
+- **Permanent:** regular Firefox only installs signed add-ons. Either sign it yourself for free as an unlisted add-on on [addons.mozilla.org](https://addons.mozilla.org/developers/), or use Firefox Developer Edition / Nightly with `xpinstall.signatures.required` set to `false` in `about:config`.
+
+With the Ubuntu snap Firefox, the first export may ask you to allow the extension to run a helper program; allow it.
 
 ### What the installer does
 

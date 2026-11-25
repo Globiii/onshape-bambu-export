@@ -85,7 +85,10 @@ function setStatus(text, badge) {
 function download(files, saveAs) {
   for (const f of files) {
     chrome.downloads.download({
-      url: `data:application/octet-stream;base64,${f.b64}`,
+      // Firefox refuses data: URLs here; Chrome's service worker has no createObjectURL.
+      url: URL.createObjectURL
+        ? URL.createObjectURL(new Blob([Uint8Array.from(atob(f.b64), (c) => c.charCodeAt(0))]))
+        : `data:application/octet-stream;base64,${f.b64}`,
       filename: f.name.replace(/[\\/:*?"<>|]+/g, "_"),
       saveAs,
     });
