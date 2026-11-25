@@ -4,7 +4,7 @@ A Chrome extension that exports parts from the Onshape Part Studio you have open
 
 <img src="docs/popup.png" width="300" alt="Extension popup: part list, format and action choices">
 
-> **Beta, Linux only for now.** Tested on Ubuntu with Chrome and the Bambu Studio Flatpak. Windows/macOS support is planned.
+> **Beta.** Linux is tested (Ubuntu, Chrome, Bambu Studio Flatpak). **Windows support is new and not yet tested on a real Windows machine.** Bug reports are very welcome. macOS isn't supported yet.
 
 ## Features
 
@@ -15,13 +15,24 @@ A Chrome extension that exports parts from the Onshape Part Studio you have open
   - **Bambu:** open in Bambu Studio only
   - **Save:** folder tree only
   - **Save as…:** pick any folder
-- Folder tree: `~/Downloads/onshape-export/<document>/<part studio>/<date>_<version>/`. Exporting the same version again moves the older files into `archive/<export time>/` instead of overwriting them.
+- Folder tree: `Downloads/onshape-export/<document>/<part studio>/<date>_<version>/`. Exporting the same version again moves the older files into `archive/<export time>/` instead of overwriting them.
 - Keeps running if you close the popup; the toolbar icon shows `…` / `✓` / `!`.
 - Uses your normal Onshape login. No API keys needed.
 
 ## Install
 
-Requirements: Linux, Python 3, a Chromium-based browser (Chrome, Chromium, Brave, Edge), Bambu Studio, and `zenity` for "Save as…" (preinstalled on Ubuntu).
+You need a Chromium-based browser (Chrome, Edge, Brave, Chromium), Bambu Studio and Python 3.
+
+### Windows
+
+1. Install Python 3 from [python.org](https://www.python.org/downloads/) (keep the "py launcher" option ticked).
+2. Download this repo (**Code → Download ZIP**) and unzip it somewhere permanent, e.g. `Documents\onshape-bambu-export`.
+3. Double-click **`install.bat`**.
+4. Open `chrome://extensions` (or `edge://extensions`), turn on **Developer mode**, click **Load unpacked** and pick the `onshape-exporter` folder.
+
+Bambu Studio is found in its default install folder. If yours is elsewhere, set the `BAMBU_STUDIO` environment variable to the full path of `bambu-studio.exe`.
+
+### Linux
 
 ```bash
 git clone https://github.com/Globiii/onshape-bambu-export.git
@@ -29,11 +40,11 @@ cd onshape-bambu-export
 ./install.sh
 ```
 
-Then open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and pick the `onshape-exporter` folder.
+Then load the `onshape-exporter` folder as above. "Save as…" uses `zenity` (preinstalled on Ubuntu). Bambu Studio is found as a Flatpak, a snap, `bambu-studio` on your PATH, or an AppImage in `~/Applications`; otherwise set `BAMBU_STUDIO=/path/to/bambu-studio`.
 
-`install.sh` registers a small helper (`bambu_host.py`) with your browser. Browsers can't write into your folders or start programs themselves, so the helper does that. It only accepts messages from this extension, and it only writes 3D/CAD files into the export folder or the folder you pick.
+### What the installer does
 
-Bambu Studio is found as a Flatpak, a snap, `bambu-studio` on your PATH, or an AppImage in `~/Applications`. Anything else: set `BAMBU_STUDIO=/path/to/bambu-studio`.
+It registers a small helper (`bambu_host.py`) with your browsers. Browsers can't write into your folders or start programs themselves, so the helper does that. It only accepts messages from this extension, and it only writes 3D/CAD files into the export folder or the folder you pick. If you move the folder, run the installer again.
 
 ## How it works
 
@@ -41,7 +52,7 @@ The popup runs Onshape API calls inside your open Onshape tab, so they use your 
 
 ## Uninstall
 
-Remove the extension in `chrome://extensions`, then delete `~/.config/<browser>/NativeMessagingHosts/io.github.globiii.onshape_bambu.json`.
+Remove the extension in your browser, then run `python install.py --uninstall` (Windows: `py install.py --uninstall`).
 
 ## Disclaimer
 

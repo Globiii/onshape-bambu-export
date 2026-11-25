@@ -11,6 +11,7 @@ import sys
 import time
 from pathlib import Path
 
+WINDOWS = sys.platform == "win32"
 # Both inside $HOME so the Bambu Flatpak can read them.
 OUT_ROOT = Path.home() / "Downloads" / "onshape-export"  # "both": user keeps the files
 CACHE_ROOT = OUT_ROOT / ".temp"  # "bambu only": temporary; not directly in ~/.* because snaps can't read that
@@ -33,9 +34,26 @@ def send_msg(obj):
     sys.stdout.buffer.flush()
 
 
+# Names Windows refuses as file or folder names, with or without an extension.
+WIN_RESERVED = {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)), *(f"LPT{i}" for i in range(1, 10))}
+
+
 def clean(text, fallback):
     """One safe path component: no separators, no leading dots, so names from the browser can't escape the folder."""
-    return re.sub(r"[^\w.+\- ]+", "_", str(text)).strip(" ._")[:80] or fallback
+    name = re.sub(r"[^\w.+\- ]+", "_", str(text)).strip(" ._")[:80] or fallback
+    return f"_{name}" if name.split(".")[0].upper() in WIN_RESERVED else name
+
+
+def launch(cmd):
+    """Start a program that outlives this helper, without inheriting Chrome's stdin/stdout pipe."""
+    io = dict(stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if not WINDOWS:
+        return subprocess.Popen(cmd, start_new_session=True, **io)
+    flags = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+    try:  # Chrome may run the helper in a job that kills children when it exits; break out of it if allowed.
+        return subprocess.Popen(cmd, creationflags=flags | subprocess.CREATE_BREAKAWAY_FROM_JOB, **io)
+    except OSError:
+        return subprocess.Popen(cmd, creationflags=flags, **io)
 
 
 def safe_name(name, taken):
@@ -84,9 +102,17 @@ def prune_cache():
 
 
 def bambu_command():
-    """How to start Bambu Studio: $BAMBU_STUDIO, the Flatpak, or a bambu-studio/AppImage on PATH or in ~/Applications."""
+    """How to start Bambu Studio: $BAMBU_STUDIO, the Windows install folder, the Flatpak, or a bambu-studio/AppImage
+    on PATH or in ~/Applications."""
     if os.environ.get("BAMBU_STUDIO"):
         return [os.environ["BAMBU_STUDIO"]]
+    if WINDOWS:
+        # shortcut: checks the default install folders only, read the uninstall registry key if people install elsewhere
+        for base in ("ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA"):
+            for sub in ("Bambu Studio", r"Programs\Bambu Studio"):
+                exe = Path(os.environ.get(base, "")) / sub / "bambu-studio.exe"
+                if os.environ.get(base) and exe.is_file():
+                    return [str(exe)]
     if shutil.which("flatpak") and subprocess.run(["flatpak", "info", FLATPAK_ID], capture_output=True).returncode == 0:
         return ["flatpak", "run", FLATPAK_ID]
     for name in ("bambu-studio", "BambuStudio"):  # snap, distro package, or a symlinked AppImage
@@ -100,6 +126,15 @@ def bambu_command():
 
 def pick_folder():
     """Native folder dialog; None if the user cancels."""
+    if WINDOWS:
+        import tkinter as tk
+        from tkinter import filedialog
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)  # otherwise the dialog can open behind the browser
+        path = filedialog.askdirectory(parent=root, title="Save Onshape export to…", initialdir=Path.home() / "Downloads")
+        root.destroy()
+        return Path(path) if path else None
     r = subprocess.run(["zenity", "--file-selection", "--directory", "--title=Save Onshape export to…",
                         f"--filename={Path.home() / 'Downloads'}/"],
                        stdin=subprocess.DEVNULL, capture_output=True, text=True)
@@ -117,8 +152,10 @@ def main():
             if not target.is_dir():
                 target = OUT_ROOT
             target.mkdir(parents=True, exist_ok=True)
-            subprocess.Popen(["xdg-open", str(target)], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                             stderr=subprocess.DEVNULL, start_new_session=True)
+            if WINDOWS:
+                os.startfile(target)
+            else:
+                launch(["xdg-open", str(target)])
             return send_msg({"ok": True, "dir": str(target).replace(str(Path.home()), "~", 1)})
         # mode: "both" (organised + Bambu), "bambu" (cache + Bambu), "save" (organised), "saveas" (picked folder).
         mode = msg.get("mode") or ("both" if msg.get("keep") else "bambu")  # "keep" = older extension versions
@@ -137,9 +174,7 @@ def main():
         paths = save_files(msg["files"], out_dir, archive_old=mode != "saveas")
         printable = [p for p in paths if Path(p).suffix in BAMBU_EXT]
         if mode in ("both", "bambu") and printable:
-            subprocess.Popen([*bambu_command(), *printable],
-                             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                             start_new_session=True)
+            launch([*bambu_command(), *printable])
         send_msg({"ok": True, "paths": paths, "dir": str(out_dir).replace(str(Path.home()), "~", 1)})
     except Exception as e:  # report back to the popup instead of dying silently
         send_msg({"err": str(e)})
