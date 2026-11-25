@@ -1,18 +1,19 @@
-# Onshape → Bambu Studio exporter
+# Onshape → slicer exporter (Bambu Studio, OrcaSlicer, Cura)
 
-A Chrome extension that exports parts from the Onshape Part Studio you have open and sends them straight to Bambu Studio, like Fusion's "Send to 3D print utility". You can also save them into a tidy folder tree, or anywhere you choose.
+A Chrome extension that exports parts from the Onshape Part Studio you have open and sends them straight to **Bambu Studio, OrcaSlicer or UltiMaker Cura**, like Fusion's "Send to 3D print utility". You can also save them into a tidy folder tree, or anywhere you choose.
 
 <img src="docs/popup.png" width="300" alt="Extension popup: part list, format and action choices">
 
-> **Beta.** Linux is tested (Ubuntu, Chrome, Bambu Studio Flatpak). **Windows and macOS support is new and not yet tested on real machines.** Bug reports are very welcome.
+> **Beta.** Linux with Bambu Studio is tested (Ubuntu, Chrome, Flatpak). OrcaSlicer and Cura support is new. **Windows and macOS support is new and not yet tested on real machines.** Bug reports are very welcome.
 
 ## Features
 
 - Pick which parts to export; each part becomes its own file.
 - Formats: **3MF**, **STEP**, **STL** (binary, millimetres), plus IGES and Parasolid for other CAD tools.
+- Slicer: **Bambu Studio**, **OrcaSlicer** or **UltiMaker Cura** (Cura opens STL and 3MF, not STEP).
 - Then:
-  - **Bambu + Save:** open in Bambu Studio and keep a copy in the folder tree
-  - **Bambu:** open in Bambu Studio only
+  - **Open + Save:** open in the slicer and keep a copy in the folder tree
+  - **Open:** open in the slicer only
   - **Save:** folder tree only
   - **Save as…:** pick any folder
 - Folder tree: `Downloads/onshape-export/<document>/<part studio>/<date>_<version>/`. Exporting the same version again moves the older files into `archive/<export time>/` instead of overwriting them.
@@ -21,7 +22,7 @@ A Chrome extension that exports parts from the Onshape Part Studio you have open
 
 ## Install
 
-You need a Chromium-based browser (Chrome, Edge, Brave, Chromium), Bambu Studio and Python 3.
+You need a Chromium-based browser (Chrome, Edge, Brave, Chromium), Python 3 and at least one of the slicers.
 
 ### Windows
 
@@ -30,7 +31,7 @@ You need a Chromium-based browser (Chrome, Edge, Brave, Chromium), Bambu Studio 
 3. Double-click **`install.bat`**.
 4. Open `chrome://extensions` (or `edge://extensions`), turn on **Developer mode**, click **Load unpacked** and pick the `onshape-exporter` folder.
 
-Bambu Studio is found in its default install folder. If yours is elsewhere, set the `BAMBU_STUDIO` environment variable to the full path of `bambu-studio.exe`.
+Slicers are found in their default install folders. If yours is elsewhere, set `BAMBU_STUDIO`, `ORCA_SLICER` or `ULTIMAKER_CURA` to the full path of its `.exe`.
 
 ### macOS
 
@@ -43,7 +44,7 @@ Bambu Studio is found in its default install folder. If yours is elsewhere, set 
    ```
 3. Load the `onshape-exporter` folder as an unpacked extension (see the Windows steps).
 
-Bambu Studio is found as `BambuStudio.app` in `/Applications` or `~/Applications`. The first export may make macOS ask whether Bambu Studio may access your Downloads folder; allow it.
+Slicers are found in `/Applications` or `~/Applications` (`BambuStudio.app`, `OrcaSlicer.app`, `UltiMaker Cura.app`). The first export may make macOS ask whether the slicer may access your Downloads folder; allow it.
 
 ### Linux
 
@@ -53,7 +54,7 @@ cd onshape-bambu-export
 ./install.sh
 ```
 
-Then load the `onshape-exporter` folder as an unpacked extension. "Save as…" uses `zenity` (preinstalled on Ubuntu). Bambu Studio is found as a Flatpak, a snap, `bambu-studio` on your PATH, or an AppImage in `~/Applications`; otherwise set `BAMBU_STUDIO=/path/to/bambu-studio`.
+Then load the `onshape-exporter` folder as an unpacked extension. "Save as…" uses `zenity` (preinstalled on Ubuntu). Slicers are found as a Flatpak, a snap/distro package on your PATH, or an AppImage in `~/Applications`; otherwise set `BAMBU_STUDIO`, `ORCA_SLICER` or `ULTIMAKER_CURA` to its path.
 
 ### What the installer does
 
@@ -69,7 +70,7 @@ Remove the extension in your browser, then run `python install.py --uninstall` (
 
 ## Disclaimer
 
-Unofficial hobby project. Not affiliated with or endorsed by Onshape / PTC Inc. or Bambu Lab. Use at your own risk.
+Unofficial hobby project. Not affiliated with or endorsed by Onshape / PTC Inc., Bambu Lab, the OrcaSlicer project or UltiMaker. Use at your own risk.
 
 ## License
 

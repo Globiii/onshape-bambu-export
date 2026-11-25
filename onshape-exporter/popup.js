@@ -89,7 +89,7 @@ $("export").addEventListener("click", () => {
   const parts = [...document.querySelectorAll("#parts input:checked")].map((b) => ({ id: b.value, name: b.dataset.name }));
   if (!parts.length) { $("status").textContent = "Pick at least one part."; return; }
   // The background worker does the export, so closing this popup doesn't stop it.
-  chrome.runtime.sendMessage({ type: "export", tabId, doc, parts, format: radio("format"), action: radio("action"), folder });
+  chrome.runtime.sendMessage({ type: "export", tabId, doc, parts, format: radio("format"), slicer: radio("slicer"), action: radio("action"), folder });
 });
 
 const HOST = "io.github.globiii.onshape_bambu";
@@ -99,36 +99,36 @@ $("open").addEventListener("click", async () => {
     const reply = await chrome.runtime.sendNativeMessage(HOST, { openFolder: true, folder });
     $("status").textContent = reply.err ? `Helper error: ${reply.err}` : `Opened ${reply.dir}`;
   } catch (e) {
-    $("status").textContent = `Bambu helper not installed (${e.message}).`;
+    $("status").textContent = `Helper not installed (${e.message}).`;
   }
 });
 
 chrome.runtime.onMessage.addListener((msg) => { if (msg.type === "status") $("status").textContent = msg.text; });
 chrome.runtime.sendMessage({ type: "getStatus" }).then((t) => { if (t) $("status").textContent = t; }).catch(() => {});
 
-// Remember the last choices (default STEP + Both); storage can be unavailable, so never let it break the popup.
-// "last-" keys are new so an older saved "Open in Bambu" choice doesn't override the new default.
-for (const [id, def] of [["format", "STEP"], ["action", "both"]]) {
+// Remember the last choices (default STEP + Bambu + Open & Save); storage can be unavailable, so never let it break the popup.
+const RENAMED = { download: "save", bambu: "open" };  // older saved choices
+for (const [id, def] of [["format", "STEP"], ["slicer", "bambu"], ["action", "both"]]) {
   const key = `last-${id}`;
   setRadio(id, def);
   try {
     const saved = localStorage.getItem(key);
-    setRadio(id, saved === "download" ? "save" : saved || def);  // "download" was renamed to "save"
+    if (saved) setRadio(id, id === "action" ? RENAMED[saved] || saved : saved);
   } catch {}
   document.querySelectorAll(`input[name="${id}"]`).forEach((r) =>
     r.addEventListener("change", () => { try { localStorage.setItem(key, r.value); } catch {} }));
 }
 
-// Bambu Studio can't open IGES/Parasolid: disable the Bambu choices and fall back to Save.
-const BAMBU_FORMATS = ["STEP", "STL", "3MF"];
+// Which formats each slicer opens; for anything else the "Open" choices are disabled and it falls back to Save.
+const SLICER_FORMATS = { bambu: ["STEP", "STL", "3MF"], orca: ["STEP", "STL", "3MF"], cura: ["STL", "3MF"] };
 function syncActions() {
-  const bambuOk = BAMBU_FORMATS.includes(radio("format"));
-  document.querySelectorAll('input[name="action"][value="both"], input[name="action"][value="bambu"]').forEach((r) => {
-    r.disabled = !bambuOk;
+  const canOpen = SLICER_FORMATS[radio("slicer")].includes(radio("format"));
+  document.querySelectorAll('input[name="action"][value="both"], input[name="action"][value="open"]').forEach((r) => {
+    r.disabled = !canOpen;
   });
-  if (!bambuOk && ["both", "bambu"].includes(radio("action"))) setRadio("action", "save");
+  if (!canOpen && ["both", "open"].includes(radio("action"))) setRadio("action", "save");
 }
-document.querySelectorAll('input[name="format"]').forEach((r) => r.addEventListener("change", syncActions));
+document.querySelectorAll('input[name="format"], input[name="slicer"]').forEach((r) => r.addEventListener("change", syncActions));
 syncActions();
 
 init().catch((e) => { $("parts").textContent = `Error: ${e.message}`; }).finally(() => {

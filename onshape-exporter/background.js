@@ -92,14 +92,15 @@ function download(files, saveAs) {
   }
 }
 
+const SLICER_NAMES = { bambu: "Bambu Studio", orca: "OrcaSlicer", cura: "UltiMaker Cura" };
 const DONE = {
-  both: (n, dir) => `Opened ${n} file(s) in Bambu Studio and saved to ${dir}.`,
-  bambu: (n) => `Opened ${n} file(s) in Bambu Studio.`,
+  both: (n, dir, app) => `Opened ${n} file(s) in ${app} and saved to ${dir}.`,
+  open: (n, dir, app) => `Opened ${n} file(s) in ${app}.`,
   save: (n, dir) => `Saved ${n} file(s) to ${dir}.`,
   saveas: (n, dir) => `Saved ${n} file(s) to ${dir}.`,
 };
 
-async function runExport({ tabId, doc, parts, format, action, folder }) {
+async function runExport({ tabId, doc, parts, format, slicer, action, folder }) {
   setStatus(`Exporting ${parts.length} part(s) as ${format}…`, "…");
   // A long-running executeScript is not activity; ping an API so Chrome keeps this worker alive.
   const keepAlive = setInterval(() => chrome.runtime.getPlatformInfo(), 20000);
@@ -109,13 +110,13 @@ async function runExport({ tabId, doc, parts, format, action, folder }) {
     if (res.err) return setStatus(res.err, "!");
     if (action === "saveas") setStatus("Choose a folder in the dialog…", "…");
     try {
-      const reply = await chrome.runtime.sendNativeMessage(HOST, { files: res.ok, mode: action, folder });
+      const reply = await chrome.runtime.sendNativeMessage(HOST, { files: res.ok, mode: action, slicer, folder });
       if (reply.cancelled) return setStatus("Save cancelled.", "");
       if (reply.err) return setStatus(`Helper error: ${reply.err}`, "!");
-      setStatus((DONE[action] || DONE.both)(res.ok.length, reply.dir), "✓");
+      setStatus((DONE[action] || DONE.both)(res.ok.length, reply.dir, SLICER_NAMES[slicer] || "the slicer"), "✓");
     } catch (e) {
       download(res.ok, action === "saveas");
-      setStatus(`Bambu helper not installed (${e.message}); downloaded with Chrome instead.`, "!");
+      setStatus(`Helper not installed (${e.message}); downloaded with Chrome instead.`, "!");
     }
   } catch (e) {
     setStatus(`Export failed: ${e.message}`, "!");

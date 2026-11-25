@@ -69,19 +69,28 @@
   <div class="field" role="radiogroup" aria-label="Format">
     <span>Format</span>
     <div class="seg">
-      <label title="Bambu: yes"><input type="radio" name="format" value="STEP"> STEP</label>
-      <label title="Bambu: yes (mm)"><input type="radio" name="format" value="STL"> STL</label>
-      <label title="Bambu: yes, native format"><input type="radio" name="format" value="3MF"> 3MF</label>
-      <label title="CAD exchange, not for Bambu"><input type="radio" name="format" value="IGES"> IGES</label>
-      <label title="CAD exchange (.x_t), not for Bambu"><input type="radio" name="format" value="PARASOLID"> Parasolid</label>
+      <label title="Opens in Bambu and Orca"><input type="radio" name="format" value="STEP"> STEP</label>
+      <label title="Opens in all slicers (mm)"><input type="radio" name="format" value="STL"> STL</label>
+      <label title="Opens in all slicers"><input type="radio" name="format" value="3MF"> 3MF</label>
+      <label title="CAD exchange, not for slicers"><input type="radio" name="format" value="IGES"> IGES</label>
+      <label title="CAD exchange (.x_t), not for slicers"><input type="radio" name="format" value="PARASOLID"> Parasolid</label>
+    </div>
+  </div>
+
+  <div class="field" role="radiogroup" aria-label="Slicer">
+    <span>Slicer</span>
+    <div class="seg">
+      <label><input type="radio" name="slicer" value="bambu"> Bambu Studio</label>
+      <label><input type="radio" name="slicer" value="orca"> Orca</label>
+      <label title="Opens STL and 3MF (no STEP)"><input type="radio" name="slicer" value="cura"> Cura</label>
     </div>
   </div>
 
   <div class="field" role="radiogroup" aria-label="Then">
     <span>Then</span>
     <div class="seg">
-      <label title="Open in Bambu Studio and save to the export folders"><input type="radio" name="action" value="both"> Bambu + Save</label>
-      <label title="Open in Bambu Studio only"><input type="radio" name="action" value="bambu"> Bambu</label>
+      <label title="Open in the slicer and save to the export folders"><input type="radio" name="action" value="both"> Open + Save</label>
+      <label title="Open in the slicer only"><input type="radio" name="action" value="open"> Open</label>
       <label title="Save to ~/Downloads/onshape-export/<document>/<part studio>/<date>_<version>"><input type="radio" name="action" value="save"> Save</label>
       <label title="Pick a folder"><input type="radio" name="action" value="saveas"> Save as…</label>
     </div>

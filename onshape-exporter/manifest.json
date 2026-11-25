@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Onshape Part Exporter",
   "version": "0.4.0",
-  "description": "Unofficial: export Onshape Part Studio parts (3MF, STEP, STL…) and open them in Bambu Studio.",
+  "description": "Unofficial: export Onshape Part Studio parts (3MF, STEP, STL…) and open them in Bambu Studio, OrcaSlicer or Cura.",
   "action": {
     "default_popup": "popup.html",
     "default_icon": {

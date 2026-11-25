@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Chrome native-messaging helper: saves files sent by the Onshape extension and opens them in Bambu Studio."""
+"""Chrome native-messaging helper: saves files sent by the Onshape extension and opens them in a slicer."""
 import base64
 import os
 import json
@@ -15,11 +15,27 @@ WINDOWS = sys.platform == "win32"
 MAC = sys.platform == "darwin"
 # Both inside $HOME so the Bambu Flatpak can read them.
 OUT_ROOT = Path.home() / "Downloads" / "onshape-export"  # "both": user keeps the files
-CACHE_ROOT = OUT_ROOT / ".temp"  # "bambu only": temporary; not directly in ~/.* because snaps can't read that
+CACHE_ROOT = OUT_ROOT / ".temp"  # "open only": temporary; not directly in ~/.* because snaps can't read that
 CACHE_DAYS = 7
-FLATPAK_ID = "com.bambulab.BambuStudio"
 ALLOWED_EXT = {".stl", ".step", ".3mf", ".igs", ".x_t"}
-BAMBU_EXT = {".stl", ".step", ".3mf"}  # what Bambu Studio can open
+# Where each slicer lives on each OS, and which of our formats it opens. Override with the env var.
+SLICERS = {
+    "bambu": dict(label="Bambu Studio", env="BAMBU_STUDIO", ext={".stl", ".step", ".3mf"},
+                  mac=["BambuStudio.app", "Bambu Studio.app"],
+                  win=["Bambu Studio/bambu-studio.exe", "Programs/Bambu Studio/bambu-studio.exe"],
+                  flatpak=["com.bambulab.BambuStudio"], path=["bambu-studio", "BambuStudio"],
+                  appimage="Bambu*Studio*.AppImage"),
+    "orca": dict(label="OrcaSlicer", env="ORCA_SLICER", ext={".stl", ".step", ".3mf"},
+                 mac=["OrcaSlicer.app"],
+                 win=["OrcaSlicer/orca-slicer.exe", "Programs/OrcaSlicer/orca-slicer.exe"],
+                 flatpak=["com.orcaslicer.OrcaSlicer", "io.github.softfever.OrcaSlicer"], path=["orca-slicer", "OrcaSlicer"],
+                 appimage="OrcaSlicer*.AppImage"),
+    "cura": dict(label="UltiMaker Cura", env="ULTIMAKER_CURA", ext={".stl", ".3mf"},  # no STEP without a plugin
+                 mac=["UltiMaker Cura.app", "Ultimaker Cura.app"],
+                 win=["UltiMaker Cura*/UltiMaker-Cura.exe", "Ultimaker Cura*/Cura.exe"],  # folder name includes the version
+                 flatpak=["com.ultimaker.cura"], path=["cura", "UltiMaker-Cura"],
+                 appimage="*Cura*.AppImage"),
+}
 
 
 def read_msg():
@@ -102,33 +118,37 @@ def prune_cache():
             shutil.rmtree(d, ignore_errors=True)
 
 
-def bambu_command():
-    """How to start Bambu Studio: $BAMBU_STUDIO, the Windows install folder, the macOS app, the Flatpak, or a
-    bambu-studio/AppImage on PATH or in ~/Applications."""
-    if os.environ.get("BAMBU_STUDIO"):
-        return [os.environ["BAMBU_STUDIO"]]
+def slicer_command(key):
+    """How to start a slicer: its env var, the macOS app, the Windows install folder, the Flatpak, a command on PATH
+    (snap, distro package) or an AppImage in ~/Applications."""
+    sl = SLICERS[key]
+    if os.environ.get(sl["env"]):
+        return [os.environ[sl["env"]]]
     if MAC:
         for apps in (Path("/Applications"), Path.home() / "Applications"):
-            for app in ("BambuStudio.app", "Bambu Studio.app"):
+            for app in sl["mac"]:
                 if (apps / app).is_dir():
                     return ["open", "-a", str(apps / app)]  # `open` hands the files to the app and returns
-        raise RuntimeError("BambuStudio.app not found in /Applications. Install it, or set BAMBU_STUDIO.")
-    if WINDOWS:
+    elif WINDOWS:
         # shortcut: checks the default install folders only, read the uninstall registry key if people install elsewhere
         for base in ("ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA"):
-            for sub in ("Bambu Studio", r"Programs\Bambu Studio"):
-                exe = Path(os.environ.get(base, "")) / sub / "bambu-studio.exe"
-                if os.environ.get(base) and exe.is_file():
-                    return [str(exe)]
-    if shutil.which("flatpak") and subprocess.run(["flatpak", "info", FLATPAK_ID], capture_output=True).returncode == 0:
-        return ["flatpak", "run", FLATPAK_ID]
-    for name in ("bambu-studio", "BambuStudio"):  # snap, distro package, or a symlinked AppImage
-        if shutil.which(name):
-            return [shutil.which(name)]
-    appimages = sorted((Path.home() / "Applications").glob("Bambu*Studio*.AppImage"))
-    if appimages:
-        return [str(appimages[-1])]
-    raise RuntimeError("Bambu Studio not found. Install it, or set BAMBU_STUDIO to its path.")
+            if os.environ.get(base):
+                for pattern in sl["win"]:
+                    found = sorted(Path(os.environ[base]).glob(pattern))
+                    if found:
+                        return [str(found[-1])]  # newest version folder
+    else:
+        if shutil.which("flatpak"):
+            for app_id in sl["flatpak"]:
+                if subprocess.run(["flatpak", "info", app_id], capture_output=True).returncode == 0:
+                    return ["flatpak", "run", app_id]
+        for name in sl["path"]:
+            if shutil.which(name):
+                return [shutil.which(name)]
+        appimages = sorted((Path.home() / "Applications").glob(sl["appimage"]))
+        if appimages:
+            return [str(appimages[-1])]
+    raise RuntimeError(f"{sl['label']} not found. Install it, or set {sl['env']} to its path.")
 
 
 def pick_folder():
@@ -169,8 +189,9 @@ def main():
             else:
                 launch(["open" if MAC else "xdg-open", str(target)])
             return send_msg({"ok": True, "dir": str(target).replace(str(Path.home()), "~", 1)})
-        # mode: "both" (organised + Bambu), "bambu" (cache + Bambu), "save" (organised), "saveas" (picked folder).
-        mode = msg.get("mode") or ("both" if msg.get("keep") else "bambu")  # "keep" = older extension versions
+        # mode: "both" (organised + slicer), "open" (temp + slicer), "save" (organised), "saveas" (picked folder).
+        mode = msg.get("mode") or ("both" if msg.get("keep") else "open")  # "keep" = older extension versions
+        mode = {"bambu": "open"}.get(mode, mode)  # "bambu" = older name of "open"
         if mode in ("both", "save"):
             # Same day + same version = same folder; replaced files move to its archive/ subfolder.
             doc, studio, version = (msg.get("folder") or ["unsorted", "unsorted", ""])[:3]
@@ -184,9 +205,12 @@ def main():
             prune_cache()
             out_dir = CACHE_ROOT / time.strftime("%Y-%m-%d_%H-%M-%S")
         paths = save_files(msg["files"], out_dir, archive_old=mode != "saveas")
-        printable = [p for p in paths if Path(p).suffix in BAMBU_EXT]
-        if mode in ("both", "bambu") and printable:
-            launch([*bambu_command(), *printable])
+        slicer = msg.get("slicer") or "bambu"  # older extension versions only knew Bambu
+        if slicer not in SLICERS:
+            raise ValueError(f"unknown slicer: {slicer!r}")
+        printable = [p for p in paths if Path(p).suffix in SLICERS[slicer]["ext"]]
+        if mode in ("both", "open") and printable:
+            launch([*slicer_command(slicer), *printable])
         send_msg({"ok": True, "paths": paths, "dir": str(out_dir).replace(str(Path.home()), "~", 1)})
     except Exception as e:  # report back to the popup instead of dying silently
         send_msg({"err": str(e)})
