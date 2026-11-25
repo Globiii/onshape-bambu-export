@@ -12,6 +12,7 @@ import time
 from pathlib import Path
 
 WINDOWS = sys.platform == "win32"
+MAC = sys.platform == "darwin"
 # Both inside $HOME so the Bambu Flatpak can read them.
 OUT_ROOT = Path.home() / "Downloads" / "onshape-export"  # "both": user keeps the files
 CACHE_ROOT = OUT_ROOT / ".temp"  # "bambu only": temporary; not directly in ~/.* because snaps can't read that
@@ -102,10 +103,16 @@ def prune_cache():
 
 
 def bambu_command():
-    """How to start Bambu Studio: $BAMBU_STUDIO, the Windows install folder, the Flatpak, or a bambu-studio/AppImage
-    on PATH or in ~/Applications."""
+    """How to start Bambu Studio: $BAMBU_STUDIO, the Windows install folder, the macOS app, the Flatpak, or a
+    bambu-studio/AppImage on PATH or in ~/Applications."""
     if os.environ.get("BAMBU_STUDIO"):
         return [os.environ["BAMBU_STUDIO"]]
+    if MAC:
+        for apps in (Path("/Applications"), Path.home() / "Applications"):
+            for app in ("BambuStudio.app", "Bambu Studio.app"):
+                if (apps / app).is_dir():
+                    return ["open", "-a", str(apps / app)]  # `open` hands the files to the app and returns
+        raise RuntimeError("BambuStudio.app not found in /Applications. Install it, or set BAMBU_STUDIO.")
     if WINDOWS:
         # shortcut: checks the default install folders only, read the uninstall registry key if people install elsewhere
         for base in ("ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA"):
@@ -135,6 +142,11 @@ def pick_folder():
         path = filedialog.askdirectory(parent=root, title="Save Onshape export to…", initialdir=Path.home() / "Downloads")
         root.destroy()
         return Path(path) if path else None
+    if MAC:
+        script = 'POSIX path of (choose folder with prompt "Save Onshape export to…" default location (path to downloads folder))'
+        r = subprocess.run(["osascript", "-e", script], stdin=subprocess.DEVNULL, capture_output=True, text=True)
+        path = r.stdout.strip()
+        return Path(path) if r.returncode == 0 and path else None  # returncode 1 = cancelled
     r = subprocess.run(["zenity", "--file-selection", "--directory", "--title=Save Onshape export to…",
                         f"--filename={Path.home() / 'Downloads'}/"],
                        stdin=subprocess.DEVNULL, capture_output=True, text=True)
@@ -155,7 +167,7 @@ def main():
             if WINDOWS:
                 os.startfile(target)
             else:
-                launch(["xdg-open", str(target)])
+                launch(["open" if MAC else "xdg-open", str(target)])
             return send_msg({"ok": True, "dir": str(target).replace(str(Path.home()), "~", 1)})
         # mode: "both" (organised + Bambu), "bambu" (cache + Bambu), "save" (organised), "saveas" (picked folder).
         mode = msg.get("mode") or ("both" if msg.get("keep") else "bambu")  # "keep" = older extension versions

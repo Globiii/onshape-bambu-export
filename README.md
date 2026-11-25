@@ -4,7 +4,7 @@ A Chrome extension that exports parts from the Onshape Part Studio you have open
 
 <img src="docs/popup.png" width="300" alt="Extension popup: part list, format and action choices">
 
-> **Beta.** Linux is tested (Ubuntu, Chrome, Bambu Studio Flatpak). **Windows support is new and not yet tested on a real Windows machine.** Bug reports are very welcome. macOS isn't supported yet.
+> **Beta.** Linux is tested (Ubuntu, Chrome, Bambu Studio Flatpak). **Windows and macOS support is new and not yet tested on real machines.** Bug reports are very welcome.
 
 ## Features
 
@@ -32,6 +32,19 @@ You need a Chromium-based browser (Chrome, Edge, Brave, Chromium), Bambu Studio 
 
 Bambu Studio is found in its default install folder. If yours is elsewhere, set the `BAMBU_STUDIO` environment variable to the full path of `bambu-studio.exe`.
 
+### macOS
+
+1. Install Python 3 from [python.org](https://www.python.org/downloads/) (the built-in `python3` often only offers to install developer tools).
+2. In Terminal:
+   ```bash
+   git clone https://github.com/Globiii/onshape-bambu-export.git ~/onshape-bambu-export
+   cd ~/onshape-bambu-export
+   ./install.sh
+   ```
+3. Load the `onshape-exporter` folder as an unpacked extension (see the Windows steps).
+
+Bambu Studio is found as `BambuStudio.app` in `/Applications` or `~/Applications`. The first export may make macOS ask whether Bambu Studio may access your Downloads folder; allow it.
+
 ### Linux
 
 ```bash
@@ -40,7 +53,7 @@ cd onshape-bambu-export
 ./install.sh
 ```
 
-Then load the `onshape-exporter` folder as above. "Save as…" uses `zenity` (preinstalled on Ubuntu). Bambu Studio is found as a Flatpak, a snap, `bambu-studio` on your PATH, or an AppImage in `~/Applications`; otherwise set `BAMBU_STUDIO=/path/to/bambu-studio`.
+Then load the `onshape-exporter` folder as an unpacked extension. "Save as…" uses `zenity` (preinstalled on Ubuntu). Bambu Studio is found as a Flatpak, a snap, `bambu-studio` on your PATH, or an AppImage in `~/Applications`; otherwise set `BAMBU_STUDIO=/path/to/bambu-studio`.
 
 ### What the installer does
 
