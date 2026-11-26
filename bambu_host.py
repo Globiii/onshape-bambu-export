@@ -239,7 +239,12 @@ def main():
             raise ValueError(f"unknown slicer: {slicer!r}")
         printable = [p for p in paths if Path(p).suffix in SLICERS[slicer]["ext"]]
         if mode in ("both", "open") and printable:
-            launch([*slicer_command(slicer), *printable])
+            cmd = slicer_command(slicer)
+            launch([*cmd, *printable])
+            if cmd[:2] == ["open", "-a"]:
+                # macOS keeps an already-open slicer behind the browser when a background helper opens files.
+                app = cmd[2].replace("\\", "\\\\").replace('"', '\\"')
+                launch(["osascript", "-e", "delay 0.5", "-e", f'tell application "{app}" to activate'])
         send_msg({"ok": True, "paths": paths, "dir": home_short(out_dir)})
     except Exception as e:  # report back to the popup instead of dying silently
         send_msg({"err": str(e)})
