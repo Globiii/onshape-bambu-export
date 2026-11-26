@@ -63,7 +63,7 @@ Then load the `onshape-exporter` folder as an unpacked extension. "Save as…" u
 Run the installer for your OS as above (it registers the helper with Firefox too), then:
 
 - **Quick try:** open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on…** and pick `onshape-exporter/manifest.json`. Firefox removes it when it restarts.
-- **Permanent:** regular Firefox only installs signed add-ons. Either sign it yourself for free as an unlisted add-on on [addons.mozilla.org](https://addons.mozilla.org/developers/), or use Firefox Developer Edition / Nightly with `xpinstall.signatures.required` set to `false` in `about:config`.
+- **Permanent:** install the signed `.xpi` from the [Releases](https://github.com/Globiii/onshape-bambu-export/releases) page (drag it into Firefox). It updates itself when a new version is released.
 
 With the Ubuntu snap Firefox, the first export may ask you to allow the extension to run a helper program; allow it.
 

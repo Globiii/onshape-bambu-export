@@ -1,0 +1,12 @@
+{
+  "addons": {
+    "onshape-exporter@globiii.github.io": {
+      "updates": [
+        {
+          "version": "0.7.0",
+          "update_link": "https://github.com/Globiii/onshape-bambu-export/releases/download/v0.7.0/onshape-exporter-0.7.0.xpi"
+        }
+      ]
+    }
+  }
+}
