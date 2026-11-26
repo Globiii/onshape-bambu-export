@@ -8,7 +8,8 @@ A Chrome and Firefox extension that exports parts from the Onshape Part Studio y
 
 ## Features
 
-- Pick which parts to export; each part becomes its own file.
+- Pick which parts to export; each part becomes its own file. Parts you selected in Onshape (the part, or any face of it) are ticked automatically.
+- Keyboard shortcut **Alt+Shift+E**: exports the selected parts straight away with the format, slicer and action you last used, without opening the popup. Change it in Settings.
 - Formats: **3MF**, **STEP**, **STL** (binary, millimetres), plus IGES and Parasolid for other CAD tools.
 - Slicer: **Bambu Studio**, **OrcaSlicer**, **PrusaSlicer** or **UltiMaker Cura** (Cura opens STL and 3MF, not STEP).
 - Then:

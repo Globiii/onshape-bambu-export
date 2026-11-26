@@ -1,47 +1,7 @@
-const URL_RE = /^https:\/\/[\w-]+\.onshape\.com\/documents\/(\w+)\/([wvm])\/(\w+)\/e\/(\w+)/;
 const $ = (id) => document.getElementById(id);
 const radio = (name) => document.querySelector(`input[name="${name}"]:checked`)?.value;
 const setRadio = (name, v) => { const r = document.querySelector(`input[name="${name}"][value="${v}"]`); if (r) r.checked = true; };
 let tabId, doc, folder;
-
-// Runs inside the Onshape tab (MAIN world), so fetch uses the user's own session.
-// Must be self-contained and return {ok}|{err}: executeScript does not forward thrown errors.
-
-async function listPartsInPage(d) {
-  try {
-  const r = await fetch(`/api/v9/parts/d/${d.did}/${d.wvm}/${d.wvmid}/e/${d.eid}`);
-  if (!r.ok) throw new Error(`Listing parts failed (${r.status}). Is this a Part Studio?`);
-  const parts = (await r.json()).filter((p) => p.bodyType === "solid").map((p) => ({ id: p.partId, name: p.name }));
-
-  // Names for the export folder; any failure falls back to ids so export still works.
-  const json = async (url) => {
-    const x = await fetch(url, { signal: AbortSignal.timeout(5000) });  // names are optional, never block the popup on them
-    if (!x.ok) throw new Error(x.status);
-    return x.json();
-  };
-  const [docName, studio, version] = await Promise.all([
-    json(`/api/v9/documents/${d.did}`).then((x) => x.name).catch(() => d.did),
-    json(`/api/v9/documents/d/${d.did}/${d.wvm}/${d.wvmid}/elements`)
-      .then((els) => els.find((e) => e.id === d.eid)?.name || d.eid).catch(() => d.eid),
-    d.wvm === "v" ? json(`/api/v9/documents/d/${d.did}/versions/${d.wvmid}`).then((x) => x.name).catch(() => d.wvmid)
-      : d.wvm === "w" ? workspaceVersion().catch(() => "workspace") : "microversion",
-  ]);
-
-  // A workspace has no name of its own: use the newest version, marked "+edits" if the workspace changed since.
-  // shortcut: newest version across all branches, use the workspace's own parent version if you work with branches.
-  async function workspaceVersion() {
-    const [versions, workspaces] = await Promise.all([
-      json(`/api/v9/documents/d/${d.did}/versions`),
-      json(`/api/v9/documents/d/${d.did}/workspaces`),
-    ]);
-    if (!versions.length) return "no version";
-    const latest = versions.reduce((a, b) => (a.createdAt > b.createdAt ? a : b));
-    const ws = workspaces.find((w) => w.id === d.wvmid);
-    return ws && ws.microversion === latest.microversion ? latest.name : `${latest.name}+edits`;
-  }
-  return { ok: parts, folder: [docName, studio, version] };
-  } catch (e) { return { err: e.message }; }
-}
 
 async function runInTab(func, ...args) {
   const [res] = await chrome.scripting.executeScript({ target: { tabId }, world: "MAIN", func, args });
@@ -63,7 +23,7 @@ async function init() {
 
   $("parts").replaceChildren(...res.ok.map((p) => {
     const label = document.createElement("label");
-    const box = Object.assign(document.createElement("input"), { type: "checkbox", value: p.id });
+    const box = Object.assign(document.createElement("input"), { type: "checkbox", value: p.id, checked: p.selected });
     box.dataset.name = p.name;
     label.append(box, " ", p.name);
     return label;
@@ -104,19 +64,6 @@ $("open").addEventListener("click", async () => {
 chrome.runtime.onMessage.addListener((msg) => { if (msg.type === "status") $("status").textContent = msg.text; });
 chrome.runtime.sendMessage({ type: "getStatus" }).then((t) => { if (t) $("status").textContent = t; }).catch(() => {});
 
-// Remember the last choices (default STEP + Bambu + Open & Save); storage can be unavailable, so never let it break the popup.
-const RENAMED = { download: "save", bambu: "open" };  // older saved choices
-for (const [id, def] of [["format", "STEP"], ["slicer", "bambu"], ["action", "both"]]) {
-  const key = `last-${id}`;
-  setRadio(id, def);
-  try {
-    const saved = localStorage.getItem(key);
-    if (saved) setRadio(id, id === "action" ? RENAMED[saved] || saved : saved);
-  } catch {}
-  document.querySelectorAll(`input[name="${id}"]`).forEach((r) =>
-    r.addEventListener("change", () => { try { localStorage.setItem(key, r.value); } catch {} }));
-}
-
 // Which formats each slicer opens; for anything else the "Open" choices are disabled and it falls back to Save.
 const SLICER_FORMATS = {
   bambu: ["STEP", "STL", "3MF"], orca: ["STEP", "STL", "3MF"], prusa: ["STEP", "STL", "3MF"], cura: ["STL", "3MF"],
@@ -128,14 +75,28 @@ function syncActions() {
   });
   if (!canOpen && ["both", "open"].includes(radio("action"))) setRadio("action", "save");
 }
-document.querySelectorAll('input[name="format"], input[name="slicer"]').forEach((r) => r.addEventListener("change", syncActions));
-syncActions();
+// Remember the last choices in extension storage: the keyboard shortcut exports with them too.
+const saveLast = () => chrome.storage.local.set({ last: { format: radio("format"), slicer: radio("slicer"), action: radio("action") } });
+document.querySelectorAll('input[type="radio"]').forEach((r) => r.addEventListener("change", () => { syncActions(); saveLast(); }));
 
-// Hide slicers turned off in the settings; if the remembered one is hidden, pick the first shown.
-getSettings().then((s) => {
+async function loadChoices() {
+  let { last } = await chrome.storage.local.get("last");
+  if (!last) {  // versions before 0.7 kept them in the popup's localStorage
+    last = {};
+    try { for (const id of ["format", "slicer", "action"]) last[id] = localStorage.getItem(`last-${id}`); } catch {}
+  }
+  const RENAMED = { download: "save", bambu: "open" };  // older names of actions
+  setRadio("format", last.format || "STEP");
+  setRadio("slicer", last.slicer || "bambu");
+  setRadio("action", RENAMED[last.action] || last.action || "both");
+  // Hide slicers turned off in the settings; if the remembered one is hidden, pick the first shown.
+  const s = await getSettings();
   document.querySelectorAll('input[name="slicer"]').forEach((r) => (r.closest("label").hidden = !s.slicers.includes(r.value)));
-  if (!s.slicers.includes(radio("slicer"))) { setRadio("slicer", s.slicers[0]); syncActions(); }
-});
+  if (!s.slicers.includes(radio("slicer"))) setRadio("slicer", s.slicers[0]);
+  syncActions();
+  saveLast();  // so the shortcut matches what the popup shows
+}
+loadChoices();
 $("settings").addEventListener("click", () => chrome.runtime.openOptionsPage());
 
 init().catch((e) => { $("parts").textContent = `Error: ${e.message}`; }).finally(() => {

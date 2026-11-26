@@ -49,6 +49,15 @@ async function init() {
 
 $("recheck").addEventListener("click", checkHelper);
 
+chrome.commands.getAll().then((cmds) => {
+  $("shortcut").textContent = cmds.find((c) => c.name === "quick-export")?.shortcut || "Not set";
+});
+$("changeShortcut").addEventListener("click", () => {
+  // Firefox has an API for its shortcut page; Chrome lets extensions open chrome://extensions/shortcuts.
+  if (chrome.commands.openShortcutSettings) chrome.commands.openShortcutSettings();
+  else chrome.tabs.create({ url: "chrome://extensions/shortcuts" });
+});
+
 $("pick").addEventListener("click", async () => {
   $("saved").textContent = "Choose a folder in the dialog…";
   try {

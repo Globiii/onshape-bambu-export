@@ -130,6 +130,28 @@ async function runExport({ tabId, doc, parts, format, slicer, action, folder }) 
   }
 }
 
+// Keyboard shortcut: export the parts selected in Onshape with the popup's last choices, without opening it.
+async function quickExport(tab) {
+  tab ??= (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
+  const m = tab?.url?.match(URL_RE);
+  if (!m) return setStatus("Open an Onshape Part Studio to use the shortcut.", "!");
+  const doc = { did: m[1], wvm: m[2], wvmid: m[3], eid: m[4] };
+  setStatus("Reading selection…", "…");
+  try {
+    const [inj] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, world: "MAIN", func: listPartsInPage, args: [doc] });
+    const res = inj?.result ?? { err: "Could not run in the Onshape tab. Reload it and try again." };
+    if (res.err) return setStatus(res.err, "!");
+    let parts = res.ok.filter((p) => p.selected);
+    if (!parts.length && res.ok.length === 1) parts = res.ok;  // only one part: nothing to choose
+    if (!parts.length) return setStatus("Shortcut: select a part in Onshape first (click any face of it).", "!");
+    const { last } = await chrome.storage.local.get("last");
+    runExport({ format: "STEP", slicer: "bambu", action: "both", ...last, tabId: tab.id, doc, parts, folder: res.folder });
+  } catch (e) {
+    setStatus(`Export failed: ${e.message}`, "!");
+  }
+}
+chrome.commands.onCommand.addListener((command, tab) => { if (command === "quick-export") quickExport(tab); });
+
 chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
   if (msg.type === "export") runExport(msg);
   if (msg.type === "getStatus") reply(lastStatus);

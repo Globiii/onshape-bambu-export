@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Onshape Part Exporter",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Unofficial: export Onshape Part Studio parts (3MF, STEP, STL…) and open them in Bambu Studio, OrcaSlicer, PrusaSlicer or Cura.",
   "action": {
     "default_popup": "popup.html",
@@ -45,5 +45,13 @@
   "options_ui": {
     "page": "options.html",
     "open_in_tab": true
+  },
+  "commands": {
+    "quick-export": {
+      "suggested_key": {
+        "default": "Alt+Shift+E"
+      },
+      "description": "Export the parts selected in Onshape (last used format, slicer and action)"
+    }
   }
 }
