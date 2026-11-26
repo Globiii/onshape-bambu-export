@@ -1,17 +1,18 @@
 // Runs exports in the background so they keep going after the popup closes.
-const HOST = "io.github.globiii.onshape_bambu";
+// Chrome: service worker loads settings.js here. Firefox: listed before this file in manifest background.scripts.
+if (typeof importScripts === "function") importScripts("settings.js");
 let lastStatus = "";
 
 // Runs inside the Onshape tab (MAIN world), so fetch uses the user's own session.
 // Must be self-contained and return {ok}|{err}: executeScript does not forward thrown errors.
-async function exportInPage(d, parts, format) {
+async function exportInPage(d, parts, format, quality) {
   try {
   // Every format goes through Onshape's translation service (the old /stl endpoint redirects cross-origin
   // and the browser blocks it). Extra params were found by testing against the live API.
   const FORMATS = {
     STEP: { ext: "step", params: {} },
-    STL: { ext: "stl", params: { stlMode: "BINARY", resolution: "fine" } },
-    "3MF": { ext: "3mf", params: { resolution: "fine" } },
+    STL: { ext: "stl", params: { stlMode: "BINARY", resolution: quality } },
+    "3MF": { ext: "3mf", params: { resolution: quality } },
     IGES: { ext: "igs", params: {} },
     PARASOLID: { ext: "x_t", params: {} },
   };
@@ -108,12 +109,13 @@ async function runExport({ tabId, doc, parts, format, slicer, action, folder }) 
   // A long-running executeScript is not activity; ping an API so Chrome keeps this worker alive.
   const keepAlive = setInterval(() => chrome.runtime.getPlatformInfo(), 20000);
   try {
-    const [inj] = await chrome.scripting.executeScript({ target: { tabId }, world: "MAIN", func: exportInPage, args: [doc, parts, format] });
+    const s = await getSettings();
+    const [inj] = await chrome.scripting.executeScript({ target: { tabId }, world: "MAIN", func: exportInPage, args: [doc, parts, format, s.quality] });
     const res = inj?.result ?? { err: "Could not run in the Onshape tab. Reload it and try again." };
     if (res.err) return setStatus(res.err, "!");
     if (action === "saveas") setStatus("Choose a folder in the dialog…", "…");
     try {
-      const reply = await chrome.runtime.sendNativeMessage(HOST, { files: res.ok, mode: action, slicer, folder });
+      const reply = await chrome.runtime.sendNativeMessage(HOST, { ...helperSettings(s), files: res.ok, mode: action, slicer, folder });
       if (reply.cancelled) return setStatus("Save cancelled.", "");
       if (reply.err) return setStatus(`Helper error: ${reply.err}`, "!");
       setStatus((DONE[action] || DONE.both)(res.ok.length, reply.dir, SLICER_NAMES[slicer] || "the slicer"), "✓");

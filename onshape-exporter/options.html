@@ -1,0 +1,103 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Onshape Part Exporter settings</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1b1f24; --muted: #6b7280; --line: #e3e6ea; --soft: #f4f6f8;
+    --accent: #3d8b2c; --accent-fg: #ffffff; --err: #c62828; --ok: #2e7d32;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1e2126; --fg: #e8eaed; --muted: #9aa0a6; --line: #363a41; --soft: #2a2e34;
+      --accent: #64bc4f; --accent-fg: #0d1f08; --err: #ff7b72; --ok: #7ee787;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { font: 14px/1.5 system-ui, sans-serif; margin: 0; padding: 32px 16px; background: var(--bg); color: var(--fg); }
+  main { max-width: 620px; margin: 0 auto; }
+  header { display: flex; gap: 12px; align-items: center; margin-bottom: 24px; }
+  header img { width: 40px; height: 40px; }
+  h1 { font-size: 20px; margin: 0; }
+  header p { margin: 0; color: var(--muted); font-size: 13px; }
+
+  section { border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  h2 { font-size: 15px; margin: 0 0 4px; }
+  .hint { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .path { flex: 1 1 220px; font-family: ui-monospace, monospace; font-size: 13px; padding: 8px 10px; background: var(--soft); border-radius: 8px; word-break: break-all; }
+  label { display: flex; gap: 8px; align-items: center; cursor: pointer; padding: 4px 0; }
+  input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); margin: 0; }
+  input[type="number"] { width: 70px; font: inherit; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); }
+  .tag { font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--soft); color: var(--muted); }
+  .tag.found { color: var(--ok); }
+  button { font: inherit; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--soft); color: var(--fg); cursor: pointer; }
+  button:hover { filter: brightness(0.96); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
+  #helper.err { color: var(--err); }
+  #helper.ok { color: var(--ok); }
+  #saved { color: var(--muted); font-size: 13px; min-height: 1.5em; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="icons/icon48.png" alt="">
+    <div>
+      <h1>Onshape Part Exporter settings</h1>
+      <p>Changes are saved automatically.</p>
+    </div>
+  </header>
+
+  <section>
+    <h2>Helper</h2>
+    <p class="hint">The local helper saves files and opens the slicer. Without it, exports are downloaded by the browser.</p>
+    <div class="row"><span id="helper" role="status">Checking…</span> <button id="recheck">Check again</button></div>
+  </section>
+
+  <section>
+    <h2>Export folder</h2>
+    <p class="hint">"Open + Save" and "Save" put files in <code>&lt;folder&gt;/&lt;document&gt;/&lt;part studio&gt;/&lt;date&gt;_&lt;version&gt;</code>.</p>
+    <div class="row">
+      <span class="path" id="root">Default</span>
+      <button id="pick" class="primary">Change…</button>
+      <button id="reset">Use default</button>
+      <button id="openRoot">Open</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Slicers</h2>
+    <p class="hint">Which slicers the popup shows.</p>
+    <div id="slicers">
+      <label><input type="checkbox" value="bambu"> Bambu Studio <span class="tag" data-for="bambu"></span></label>
+      <label><input type="checkbox" value="orca"> OrcaSlicer <span class="tag" data-for="orca"></span></label>
+      <label><input type="checkbox" value="prusa"> PrusaSlicer <span class="tag" data-for="prusa"></span></label>
+      <label><input type="checkbox" value="cura"> UltiMaker Cura <span class="tag" data-for="cura"></span></label>
+    </div>
+  </section>
+
+  <section>
+    <h2>Folders and files</h2>
+    <label><input type="checkbox" id="dated"> <span>Start folder names with the export date (<code>2026-11-26_V4</code> instead of <code>V4</code>)</span></label>
+    <label><input type="checkbox" id="archive"> <span>Move replaced files to an <code>archive/</code> folder instead of overwriting them</span></label>
+    <label>Delete temporary "Open" files after <input type="number" id="cacheDays" min="1" max="365"> days</label>
+  </section>
+
+  <section>
+    <h2>Mesh quality</h2>
+    <p class="hint">For STL and 3MF. Finer meshes give smoother curves and bigger files. STEP is always exact.</p>
+    <div id="quality">
+      <label><input type="radio" name="quality" value="fine"> Fine</label>
+      <label><input type="radio" name="quality" value="medium"> Medium</label>
+      <label><input type="radio" name="quality" value="coarse"> Coarse</label>
+    </div>
+  </section>
+
+  <div id="saved" role="status"></div>
+</main>
+<script src="settings.js"></script>
+<script src="options.js"></script>
+</body>
+</html>

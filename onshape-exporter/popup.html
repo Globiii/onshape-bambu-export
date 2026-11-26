@@ -18,6 +18,10 @@
 
   header { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
   header img { width: 32px; height: 32px; }
+  header > div { flex: 1; min-width: 0; }
+  #settings { padding: 4px 8px; font-size: 16px; line-height: 1; background: none; border-color: transparent; color: var(--muted); }
+  #settings:hover { background: var(--soft); color: var(--fg); }
+  .seg label[hidden] { display: none; }
   header h1 { font-size: 14px; margin: 0; }
   #subtitle { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 230px; }
 
@@ -56,6 +60,7 @@
       <h1>Onshape Part Exporter</h1>
       <div id="subtitle">Reading Part Studio…</div>
     </div>
+    <button id="settings" title="Settings" aria-label="Settings">⚙</button>
   </header>
 
   <div class="box">
@@ -92,7 +97,7 @@
     <div class="seg">
       <label title="Open in the slicer and save to the export folders"><input type="radio" name="action" value="both"> Open + Save</label>
       <label title="Open in the slicer only"><input type="radio" name="action" value="open"> Open</label>
-      <label title="Save to ~/Downloads/onshape-export/<document>/<part studio>/<date>_<version>"><input type="radio" name="action" value="save"> Save</label>
+      <label title="Save to the export folder (see Settings)"><input type="radio" name="action" value="save"> Save</label>
       <label title="Pick a folder"><input type="radio" name="action" value="saveas"> Save as…</label>
     </div>
   </div>
@@ -102,6 +107,7 @@
     <button id="open" title="Open this Part Studio's export folder">Open folder</button>
   </div>
   <div id="status" role="status"></div>
+  <script src="settings.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

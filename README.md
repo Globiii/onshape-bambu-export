@@ -19,6 +19,7 @@ A Chrome and Firefox extension that exports parts from the Onshape Part Studio y
 - Folder tree: `Downloads/onshape-export/<document>/<part studio>/<date>_<version>/`. Exporting the same version again moves the older files into `archive/<export time>/` instead of overwriting them.
 - Keeps running if you close the popup; the toolbar icon shows `…` / `✓` / `!`.
 - Uses your normal Onshape login. No API keys needed.
+- Settings page (⚙ in the popup): export folder, which slicers to show, date in folder names, archive or overwrite, STL/3MF mesh quality, and how long temporary files are kept.
 
 ## Install
 

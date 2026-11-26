@@ -14,9 +14,8 @@ from pathlib import Path
 WINDOWS = sys.platform == "win32"
 MAC = sys.platform == "darwin"
 # Both inside $HOME so the Bambu Flatpak can read them.
-OUT_ROOT = Path.home() / "Downloads" / "onshape-export"  # "both": user keeps the files
-CACHE_ROOT = OUT_ROOT / ".temp"  # "open only": temporary; not directly in ~/.* because snaps can't read that
-CACHE_DAYS = 7
+OUT_ROOT = Path.home() / "Downloads" / "onshape-export"  # default export folder; the settings page can change it
+# "Open only" files go to <export folder>/.temp: not directly in ~/.* because snaps can't read that
 ALLOWED_EXT = {".stl", ".step", ".3mf", ".igs", ".x_t"}
 # Where each slicer lives on each OS, and which of our formats it opens. Override with the env var.
 SLICERS = {
@@ -91,17 +90,17 @@ def safe_name(name, taken):
     return candidate
 
 
-def save_files(files, out_dir, archive_old=True):
+def save_files(files, out_dir, existing="archive"):
+    """existing: "archive" moves replaced files to archive/, "overwrite" replaces them, "rename" adds _2, _3…"""
     out_dir.mkdir(parents=True, exist_ok=True)
-    # In a folder the user picked, never overwrite and don't add an archive/ folder: existing names count as
-    # taken, so new files get _2, _3… instead.
-    taken = set() if archive_old else {p.name for p in out_dir.iterdir()}
+    # In a folder the user picked, never overwrite and don't add an archive/ folder: existing names count as taken.
+    taken = {p.name for p in out_dir.iterdir()} if existing == "rename" else set()
     # Decode everything first so a bad file can't leave the folder half archived.
     new = [(out_dir / safe_name(f["name"], taken), base64.b64decode(f["b64"], validate=True)) for f in files]
 
     # Move files this export replaces into archive/<when they were exported>/ instead of overwriting them.
     for p, _ in new:
-        if not p.exists():
+        if existing != "archive" or not p.exists():
             continue
         archive = out_dir / "archive" / time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime(p.stat().st_mtime))
         archive.mkdir(parents=True, exist_ok=True)
@@ -116,9 +115,9 @@ def save_files(files, out_dir, archive_old=True):
     return [str(p) for p, _ in new]
 
 
-def prune_cache():
-    cutoff = time.time() - CACHE_DAYS * 86400
-    for d in CACHE_ROOT.glob("*/"):
+def prune_cache(cache_root, days):
+    cutoff = time.time() - days * 86400
+    for d in cache_root.glob("*/"):
         if d.stat().st_mtime < cutoff:
             shutil.rmtree(d, ignore_errors=True)
 
@@ -156,7 +155,7 @@ def slicer_command(key):
     raise RuntimeError(f"{sl['label']} not found. Install it, or set {sl['env']} to its path.")
 
 
-def pick_folder():
+def pick_folder(title="Save Onshape export to…"):
     """Native folder dialog; None if the user cancels."""
     if WINDOWS:
         import tkinter as tk
@@ -164,59 +163,84 @@ def pick_folder():
         root = tk.Tk()
         root.withdraw()
         root.attributes("-topmost", True)  # otherwise the dialog can open behind the browser
-        path = filedialog.askdirectory(parent=root, title="Save Onshape export to…", initialdir=Path.home() / "Downloads")
+        path = filedialog.askdirectory(parent=root, title=title, initialdir=Path.home() / "Downloads")
         root.destroy()
         return Path(path) if path else None
     if MAC:
-        script = 'POSIX path of (choose folder with prompt "Save Onshape export to…" default location (path to downloads folder))'
+        script = f'POSIX path of (choose folder with prompt "{title}" default location (path to downloads folder))'
         r = subprocess.run(["osascript", "-e", script], stdin=subprocess.DEVNULL, capture_output=True, text=True)
         path = r.stdout.strip()
         return Path(path) if r.returncode == 0 and path else None  # returncode 1 = cancelled
-    r = subprocess.run(["zenity", "--file-selection", "--directory", "--title=Save Onshape export to…",
+    r = subprocess.run(["zenity", "--file-selection", "--directory", f"--title={title}",
                         f"--filename={Path.home() / 'Downloads'}/"],
                        stdin=subprocess.DEVNULL, capture_output=True, text=True)
     path = r.stdout.strip()
     return Path(path) if r.returncode == 0 and path else None
 
 
+def home_short(path):
+    return str(path).replace(str(Path.home()), "~", 1)
+
+
+def found(key):
+    try:
+        return bool(slicer_command(key))
+    except RuntimeError:
+        return False
+
+
 def main():
     try:
         msg = read_msg()
+        # Export folder from the settings page; empty means the default.
+        root = Path(msg["root"]).expanduser() if msg.get("root") else OUT_ROOT
+        if not root.is_absolute():
+            raise ValueError(f"export folder must be an absolute path: {root}")
+        if msg.get("status"):  # settings page: is the helper there, and which slicers can it find?
+            return send_msg({"ok": True, "defaultRoot": home_short(OUT_ROOT), "root": home_short(root),
+                             "slicers": {k: found(k) for k in SLICERS}})
+        if msg.get("pickRoot"):
+            picked = pick_folder("Choose the Onshape export folder")
+            return send_msg({"cancelled": True} if picked is None
+                            else {"ok": True, "path": str(picked), "dir": home_short(picked)})
         if msg.get("openFolder"):
             # The Part Studio's folder if it was exported before, else the export root.
             doc, studio = ((msg.get("folder") or []) + ["", ""])[:2]
-            target = OUT_ROOT / clean(doc, "document") / clean(studio, "part studio")
+            target = root / clean(doc, "document") / clean(studio, "part studio")
             if not target.is_dir():
-                target = OUT_ROOT
+                target = root
             target.mkdir(parents=True, exist_ok=True)
             if WINDOWS:
                 os.startfile(target)
             else:
                 launch(["open" if MAC else "xdg-open", str(target)])
-            return send_msg({"ok": True, "dir": str(target).replace(str(Path.home()), "~", 1)})
+            return send_msg({"ok": True, "dir": home_short(target)})
         # mode: "both" (organised + slicer), "open" (temp + slicer), "save" (organised), "saveas" (picked folder).
         mode = msg.get("mode") or ("both" if msg.get("keep") else "open")  # "keep" = older extension versions
         mode = {"bambu": "open"}.get(mode, mode)  # "bambu" = older name of "open"
         if mode in ("both", "save"):
             # Same day + same version = same folder; replaced files move to its archive/ subfolder.
             doc, studio, version = (msg.get("folder") or ["unsorted", "unsorted", ""])[:3]
-            out_dir = (OUT_ROOT / clean(doc, "document") / clean(studio, "part studio")
-                       / f"{time.strftime('%Y-%m-%d')}_{clean(version, 'unknown')}")
+            name = clean(version, "unknown")
+            if msg.get("dated", True):
+                name = f"{time.strftime('%Y-%m-%d')}_{name}"
+            out_dir = root / clean(doc, "document") / clean(studio, "part studio") / name
         elif mode == "saveas":
             out_dir = pick_folder()
             if out_dir is None:
                 return send_msg({"cancelled": True})
         else:
-            prune_cache()
-            out_dir = CACHE_ROOT / time.strftime("%Y-%m-%d_%H-%M-%S")
-        paths = save_files(msg["files"], out_dir, archive_old=mode != "saveas")
+            prune_cache(root / ".temp", float(msg.get("cacheDays", 7)))
+            out_dir = root / ".temp" / time.strftime("%Y-%m-%d_%H-%M-%S")
+        existing = "rename" if mode == "saveas" else "archive" if msg.get("archive", True) else "overwrite"
+        paths = save_files(msg["files"], out_dir, existing)
         slicer = msg.get("slicer") or "bambu"  # older extension versions only knew Bambu
         if slicer not in SLICERS:
             raise ValueError(f"unknown slicer: {slicer!r}")
         printable = [p for p in paths if Path(p).suffix in SLICERS[slicer]["ext"]]
         if mode in ("both", "open") and printable:
             launch([*slicer_command(slicer), *printable])
-        send_msg({"ok": True, "paths": paths, "dir": str(out_dir).replace(str(Path.home()), "~", 1)})
+        send_msg({"ok": True, "paths": paths, "dir": home_short(out_dir)})
     except Exception as e:  # report back to the popup instead of dying silently
         send_msg({"err": str(e)})
 

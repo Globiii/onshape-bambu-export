@@ -92,11 +92,9 @@ $("export").addEventListener("click", () => {
   chrome.runtime.sendMessage({ type: "export", tabId, doc, parts, format: radio("format"), slicer: radio("slicer"), action: radio("action"), folder });
 });
 
-const HOST = "io.github.globiii.onshape_bambu";
-
 $("open").addEventListener("click", async () => {
   try {
-    const reply = await chrome.runtime.sendNativeMessage(HOST, { openFolder: true, folder });
+    const reply = await chrome.runtime.sendNativeMessage(HOST, { ...helperSettings(await getSettings()), openFolder: true, folder });
     $("status").textContent = reply.err ? `Helper error: ${reply.err}` : `Opened ${reply.dir}`;
   } catch (e) {
     $("status").textContent = `Helper not installed (${e.message}).`;
@@ -132,6 +130,13 @@ function syncActions() {
 }
 document.querySelectorAll('input[name="format"], input[name="slicer"]').forEach((r) => r.addEventListener("change", syncActions));
 syncActions();
+
+// Hide slicers turned off in the settings; if the remembered one is hidden, pick the first shown.
+getSettings().then((s) => {
+  document.querySelectorAll('input[name="slicer"]').forEach((r) => (r.closest("label").hidden = !s.slicers.includes(r.value)));
+  if (!s.slicers.includes(radio("slicer"))) { setRadio("slicer", s.slicers[0]); syncActions(); }
+});
+$("settings").addEventListener("click", () => chrome.runtime.openOptionsPage());
 
 init().catch((e) => { $("parts").textContent = `Error: ${e.message}`; }).finally(() => {
   if ($("subtitle").textContent.endsWith("…")) $("subtitle").textContent = "";
